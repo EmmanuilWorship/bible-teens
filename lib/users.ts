@@ -11,7 +11,7 @@ export async function getOrCreateUser(firebaseUser: User): Promise<UserProfile> 
 
   if (snap.exists()) return snap.data() as UserProfile;
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
+  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").trim();
   const profile: UserProfile = {
     uid: firebaseUser.uid,
     name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Учасник",

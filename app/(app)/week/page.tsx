@@ -18,15 +18,15 @@ export default function WeekPage() {
     async function load() {
       try {
         const ym = currentYearMonth();
-        const p = await getPlan(ym);
+        const [p, progs] = await Promise.all([
+          getPlan(ym),
+          getUserProgress(profile!.uid, ym),
+        ]);
         setPlan(p);
         if (p) setWeek(getWeekPlans(p));
-        try {
-          const progs = await getUserProgress(profile!.uid, ym);
-          const map: Record<string, DayProgress> = {};
-          progs.forEach((p) => (map[p.date] = p));
-          setProgressMap(map);
-        } catch {}
+        const map: Record<string, DayProgress> = {};
+        progs.forEach((p) => (map[p.date] = p));
+        setProgressMap(map);
       } catch (e) {
         console.error("Load error:", e);
       } finally {

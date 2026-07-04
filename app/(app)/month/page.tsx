@@ -17,14 +17,14 @@ export default function MonthPage() {
     async function load() {
       try {
         const ym = currentYearMonth();
-        const p = await getPlan(ym);
+        const [p, progs] = await Promise.all([
+          getPlan(ym),
+          getUserProgress(profile!.uid, ym),
+        ]);
         setPlan(p);
-        try {
-          const progs = await getUserProgress(profile!.uid, ym);
-          const map: Record<string, DayProgress> = {};
-          progs.forEach((pr) => (map[pr.date] = pr));
-          setProgressMap(map);
-        } catch {}
+        const map: Record<string, DayProgress> = {};
+        progs.forEach((pr) => (map[pr.date] = pr));
+        setProgressMap(map);
       } catch (e) {
         console.error("Load error:", e);
       } finally {

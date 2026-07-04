@@ -3,27 +3,34 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "./firebase";
 import { getOrCreateUser } from "./users";
+import { withTimeout } from "./firestore-utils";
 import type { UserProfile } from "./types";
 
 interface AuthContextType {
   firebaseUser: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  profileLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   firebaseUser: null,
   profile: null,
   loading: true,
+  profileLoading: true,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
-    const timeout = setTimeout(() => setLoading(false), 5000);
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setProfileLoading(false);
+    }, 5000);
 
     const unsub = onAuthStateChanged(auth, async (user) => {
       clearTimeout(timeout);
@@ -37,27 +44,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: Date.now(),
       } : null;
 
+      // Authentication is ready at this point. Do not block every route while
+      // the optional Firestore profile request is still in flight.
+      setProfile(fallback);
+      setLoading(false);
+
       try {
         if (user) {
-          const firestoreTimeout = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Firestore timeout")), 3000)
-          );
-          const p = await Promise.race([getOrCreateUser(user), firestoreTimeout]);
-          setProfile(p);
-        } else {
-          setProfile(null);
+          const savedProfile = await withTimeout(getOrCreateUser(user), 3000);
+          if (savedProfile) setProfile(savedProfile);
         }
       } catch {
-        setProfile(fallback);
       } finally {
-        setLoading(false);
+        setProfileLoading(false);
       }
     });
     return () => { clearTimeout(timeout); unsub(); };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, profile, loading }}>
+    <AuthContext.Provider value={{ firebaseUser, profile, loading, profileLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,13 +2,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { getPlan, getTodayPlan, currentYearMonth, todayStr, formatDate } from "@/lib/plan";
-import { getProgress, markCompleted, getUserProgress, calcStreak } from "@/lib/progress";
+import { markCompleted, getUserProgress, calcStreak } from "@/lib/progress";
 import { getLevelName, getLevelColor, getStreakEmoji } from "@/lib/gamification";
-import type { DayPlan, DayProgress, MonthPlan } from "@/lib/types";
+import type { DayPlan, DayProgress } from "@/lib/types";
 
 export default function TodayPage() {
   const { profile } = useAuth();
-  const [plan, setPlan] = useState<MonthPlan | null>(null);
   const [today, setToday] = useState<DayPlan | null>(null);
   const [progress, setProgress] = useState<DayProgress | null>(null);
   const [allProgress, setAllProgress] = useState<DayProgress[]>([]);
@@ -22,18 +21,16 @@ export default function TodayPage() {
     async function load() {
       try {
         const ym = currentYearMonth();
-        const p = await getPlan(ym);
-        setPlan(p);
+        const date = todayStr();
+        const [p, all] = await Promise.all([
+          getPlan(ym),
+          getUserProgress(profile!.uid, ym),
+        ]);
         if (p) setToday(getTodayPlan(p));
-        try {
-          const prog = await getProgress(profile!.uid, todayStr());
-          setProgress(prog);
-          if (prog?.reflection) setReflection(prog.reflection);
-        } catch {}
-        try {
-          const all = await getUserProgress(profile!.uid, ym);
-          setAllProgress(all);
-        } catch {}
+        setAllProgress(all);
+        const prog = all.find((item) => item.date === date) ?? null;
+        setProgress(prog);
+        if (prog?.reflection) setReflection(prog.reflection);
       } catch (e) {
         console.error("Load error:", e);
       } finally {
