@@ -1,7 +1,6 @@
 "use client";
-import { db, storage } from "./firebase";
+import { db } from "./firebase";
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { UserProfile } from "./types";
 import type { User } from "firebase/auth";
 import { withTimeout } from "./firestore-utils";
@@ -33,11 +32,30 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 }
 
 export async function uploadAvatar(uid: string, file: File): Promise<string> {
-  const storageRef = ref(storage, `avatars/${uid}`);
-  await uploadBytes(storageRef, file);
-  const url = await getDownloadURL(storageRef);
-  await updateDoc(doc(db, "users", uid), { photoURL: url });
-  return url;
+  const dataUrl = await compressImage(file, 128);
+  await updateDoc(doc(db, "users", uid), { photoURL: dataUrl });
+  return dataUrl;
+}
+
+function compressImage(file: File, size: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width - min) / 2;
+      const sy = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 export function getAvatarUrl(user: UserProfile): string {
