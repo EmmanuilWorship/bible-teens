@@ -3,6 +3,7 @@ import { db } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import type { MonthPlan, DayPlan } from "./types";
 import { withTimeout } from "./firestore-utils";
+import { getBuiltInPlan } from "./built-in-plans";
 
 export function currentYearMonth(): string {
   const now = new Date();
@@ -15,10 +16,15 @@ export function todayStr(): string {
 }
 
 export async function getPlan(yearMonth: string): Promise<MonthPlan | null> {
-  const ref = doc(db, "plans", yearMonth);
-  const snap = await withTimeout(getDoc(ref));
-  if (!snap || !snap.exists()) return null;
-  return snap.data() as MonthPlan;
+  try {
+    const ref = doc(db, "plans", yearMonth);
+    const snap = await withTimeout(getDoc(ref));
+    if (snap?.exists()) return snap.data() as MonthPlan;
+  } catch (error) {
+    console.warn("Could not load plan from Firestore; using built-in plan.", error);
+  }
+
+  return getBuiltInPlan(yearMonth);
 }
 
 export async function savePlan(plan: MonthPlan): Promise<void> {
