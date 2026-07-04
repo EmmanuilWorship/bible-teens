@@ -10,6 +10,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import type { DayProgress } from "./types";
+import { withTimeout } from "./firestore-utils";
 
 export function progressId(uid: string, date: string) {
   return `${uid}_${date}`;
@@ -48,7 +49,8 @@ export async function getUserProgress(uid: string, yearMonth: string): Promise<D
     where("date", ">=", yearMonth + "-01"),
     where("date", "<=", yearMonth + "-31")
   );
-  const snap = await getDocs(q);
+  const snap = await withTimeout(getDocs(q), null as any);
+  if (!snap) return [];
   return snap.docs.map((d) => d.data() as DayProgress);
 }
 
@@ -58,7 +60,8 @@ export async function getAllUsersProgress(yearMonth: string): Promise<DayProgres
     where("date", ">=", yearMonth + "-01"),
     where("date", "<=", yearMonth + "-31")
   );
-  const snap = await getDocs(q);
+  const snap = await withTimeout(getDocs(q), null as any);
+  if (!snap) return [];
   return snap.docs.map((d) => d.data() as DayProgress);
 }
 
