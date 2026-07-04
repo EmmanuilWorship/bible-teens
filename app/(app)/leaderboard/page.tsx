@@ -6,7 +6,7 @@ import { getAllUsersProgress, calcStreak } from "@/lib/progress";
 import { currentYearMonth } from "@/lib/plan";
 import { calcUserStats, getRankEmoji, getStreakEmoji, getLevelName, getLevelColor } from "@/lib/gamification";
 import { BADGES } from "@/lib/types";
-import type { UserStats } from "@/lib/types";
+import type { UserStats, DayProgress } from "@/lib/types";
 import Image from "next/image";
 
 export default function LeaderboardPage() {
