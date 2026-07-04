@@ -5,8 +5,8 @@ import { getPlan, getWeekPlans, currentYearMonth, todayStr, formatDayOfWeek } fr
 import { getAllUsersProgress, getUserProgress } from "@/lib/progress";
 import { getAllUsers } from "@/lib/users";
 import { groupThoughtsByDate } from "@/lib/community-thoughts";
-import CommunityThoughts from "@/components/CommunityThoughts";
-import type { DayPlan, DayProgress, MonthPlan } from "@/lib/types";
+import DayPanel from "@/components/DayPanel";
+import type { DayPlan, DayProgress, MonthPlan, UserProfile } from "@/lib/types";
 import type { CommunityThought } from "@/lib/community-thoughts";
 
 export default function WeekPage() {
@@ -162,11 +162,15 @@ export default function WeekPage() {
                   </p>
                 )}
                 </button>
-                {expanded && (
-                  <CommunityThoughts
+                {expanded && profile && (
+                  <DayPanel
+                    day={day}
+                    progress={prog ?? null}
                     thoughts={thoughts}
-                    currentUid={profile?.uid}
-                    showTodayLink={isToday}
+                    profile={profile}
+                    onMarkCompleted={(date, newProg) =>
+                      setProgressMap((m) => ({ ...m, [date]: newProg }))
+                    }
                   />
                 )}
               </div>
