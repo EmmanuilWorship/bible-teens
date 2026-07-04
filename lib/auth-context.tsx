@@ -11,6 +11,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   profileLoading: boolean;
+  setProfile: (p: UserProfile) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   profileLoading: true,
+  setProfile: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -63,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, profile, loading, profileLoading }}>
+    <AuthContext.Provider value={{ firebaseUser, profile, loading, profileLoading, setProfile }}>
       {children}
     </AuthContext.Provider>
   );

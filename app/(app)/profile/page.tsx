@@ -1,24 +1,28 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
-import { getUserProgress, calcStreak } from "@/lib/progress";
+import { getUserProgress } from "@/lib/progress";
 import { currentYearMonth } from "@/lib/plan";
 import { calcUserStats, getLevelName, getLevelColor, getStreakEmoji } from "@/lib/gamification";
 import { BADGES } from "@/lib/types";
-import { getAvatarUrl } from "@/lib/users";
+import { getAvatarUrl, uploadAvatar } from "@/lib/users";
 import Image from "next/image";
 
 export default function ProfilePage() {
-  const { profile } = useAuth();
+  const { profile, setProfile } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<ReturnType<typeof calcUserStats> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!profile) return;
+    setAvatarUrl(getAvatarUrl(profile));
     async function load() {
       const ym = currentYearMonth();
       const progs = await getUserProgress(profile!.uid, ym);
@@ -28,6 +32,21 @@ export default function ProfilePage() {
     }
     load();
   }, [profile]);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+    setUploading(true);
+    try {
+      const url = await uploadAvatar(profile.uid, file);
+      setAvatarUrl(url);
+      if (setProfile) setProfile({ ...profile, photoURL: url });
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleLogout() {
     await signOut(auth);
@@ -43,8 +62,6 @@ export default function ProfilePage() {
     );
   }
 
-  const avatarUrl = getAvatarUrl(profile);
-
   return (
     <div className="page pt-6 animate-fade-in">
       {/* Profile card */}
@@ -55,15 +72,26 @@ export default function ProfilePage() {
           border: "1px solid rgba(139,92,246,0.3)",
         }}
       >
-        <Image
-          src={avatarUrl}
-          alt={profile.name}
-          width={80}
-          height={80}
-          className="rounded-full mx-auto mb-3 border-2"
-          style={{ borderColor: "rgba(139,92,246,0.5)" }}
-          unoptimized
-        />
+        <div className="relative inline-block mb-3">
+          <Image
+            src={avatarUrl || getAvatarUrl(profile)}
+            alt={profile.name}
+            width={80}
+            height={80}
+            className="rounded-full border-2"
+            style={{ borderColor: "rgba(139,92,246,0.5)" }}
+            unoptimized
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center text-xs"
+            style={{ background: "#7C3AED", border: "2px solid #0a0a1f" }}
+          >
+            {uploading ? "…" : "✏️"}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+        </div>
         <h2 className="text-xl font-black">{profile.name}</h2>
         <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>{profile.email}</p>
         {profile.role === "admin" && (

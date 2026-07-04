@@ -1,6 +1,7 @@
 "use client";
-import { db } from "./firebase";
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { db, storage } from "./firebase";
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { UserProfile } from "./types";
 import type { User } from "firebase/auth";
 import { withTimeout } from "./firestore-utils";
@@ -29,6 +30,14 @@ export async function getAllUsers(): Promise<UserProfile[]> {
   const snap = await withTimeout(getDocs(collection(db, "users")));
   if (!snap) return [];
   return snap.docs.map((d) => d.data() as UserProfile);
+}
+
+export async function uploadAvatar(uid: string, file: File): Promise<string> {
+  const storageRef = ref(storage, `avatars/${uid}`);
+  await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(storageRef);
+  await updateDoc(doc(db, "users", uid), { photoURL: url });
+  return url;
 }
 
 export function getAvatarUrl(user: UserProfile): string {
