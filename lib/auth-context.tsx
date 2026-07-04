@@ -34,7 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {
         console.error("Auth error:", e);
-        setProfile(null);
+        if (user) {
+          setProfile({
+            uid: user.uid,
+            name: user.displayName || user.email?.split("@")[0] || "Учасник",
+            email: user.email || "",
+            photoURL: user.photoURL || "",
+            role: "user",
+            createdAt: Date.now(),
+          });
+        } else {
+          setProfile(null);
+        }
       } finally {
         setLoading(false);
       }
