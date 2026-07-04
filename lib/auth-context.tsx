@@ -23,7 +23,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const timeout = setTimeout(() => setLoading(false), 5000);
+
     const unsub = onAuthStateChanged(auth, async (user) => {
+      clearTimeout(timeout);
       setFirebaseUser(user);
       try {
         if (user) {
@@ -50,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     });
-    return unsub;
+    return () => { clearTimeout(timeout); unsub(); };
   }, []);
 
   return (
