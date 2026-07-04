@@ -2,15 +2,21 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { getPlan, getTodayPlan, currentYearMonth, todayStr, formatDate } from "@/lib/plan";
-import { markCompleted, getUserProgress, calcStreak } from "@/lib/progress";
+import { markCompleted, getAllUsersProgress, getUserProgress, calcStreak } from "@/lib/progress";
+import { getAllUsers } from "@/lib/users";
+import { groupThoughtsByDate } from "@/lib/community-thoughts";
+import CommunityThoughts from "@/components/CommunityThoughts";
 import { getLevelName, getLevelColor, getStreakEmoji } from "@/lib/gamification";
 import type { DayPlan, DayProgress } from "@/lib/types";
+import type { CommunityThought } from "@/lib/community-thoughts";
 
 export default function TodayPage() {
   const { profile } = useAuth();
   const [today, setToday] = useState<DayPlan | null>(null);
   const [progress, setProgress] = useState<DayProgress | null>(null);
   const [allProgress, setAllProgress] = useState<DayProgress[]>([]);
+  const [communityThoughts, setCommunityThoughts] = useState<CommunityThought[]>([]);
+  const [showCommunityThoughts, setShowCommunityThoughts] = useState(true);
   const [reflection, setReflection] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -22,15 +28,19 @@ export default function TodayPage() {
       try {
         const ym = currentYearMonth();
         const date = todayStr();
-        const [p, all] = await Promise.all([
+        const [p, all, communityProgress, users] = await Promise.all([
           getPlan(ym),
           getUserProgress(profile!.uid, ym),
+          getAllUsersProgress(ym).catch(() => []),
+          getAllUsers().catch(() => []),
         ]);
         if (p) setToday(getTodayPlan(p));
         setAllProgress(all);
         const prog = all.find((item) => item.date === date) ?? null;
         setProgress(prog);
         if (prog?.reflection) setReflection(prog.reflection);
+        const thoughtsByDate = groupThoughtsByDate(communityProgress, users);
+        setCommunityThoughts(thoughtsByDate[date] || []);
       } catch (e) {
         console.error("Load error:", e);
       } finally {
@@ -51,6 +61,18 @@ export default function TodayPage() {
     setProgress(prog);
     const all = await getUserProgress(profile.uid, currentYearMonth());
     setAllProgress(all);
+    if (prog.reflection) {
+      setCommunityThoughts((thoughts) => [
+        {
+          uid: profile.uid,
+          name: profile.name,
+          photoURL: profile.photoURL,
+          reflection: prog.reflection,
+          completedAt: prog.completedAt,
+        },
+        ...thoughts.filter((thought) => thought.uid !== profile.uid),
+      ]);
+    }
     setSaved(true);
     setSaving(false);
     setTimeout(() => setSaved(false), 3000);
@@ -190,6 +212,43 @@ export default function TodayPage() {
         </div>
       )}
 
+      {/* Community thoughts */}
+      {today && (
+        <div className="glass-strong rounded-2xl mb-4 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowCommunityThoughts((visible) => !visible)}
+            className="w-full p-4 flex items-center justify-between gap-3 text-left"
+          >
+            <div>
+              <p className="font-bold text-sm">💭 Думки учасників</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                {communityThoughts.length > 0
+                  ? `${communityThoughts.length} ${reflectionCountLabel(communityThoughts.length)}`
+                  : "Ще немає відповідей"}
+              </p>
+            </div>
+            <span
+              className="text-sm transition-transform"
+              style={{
+                color: "var(--muted)",
+                transform: showCommunityThoughts ? "rotate(180deg)" : "none",
+              }}
+            >
+              ⌄
+            </span>
+          </button>
+
+          {showCommunityThoughts && (
+            <CommunityThoughts
+              thoughts={communityThoughts}
+              currentUid={profile?.uid}
+              showTitle={false}
+            />
+          )}
+        </div>
+      )}
+
       {/* Daily question */}
       <div className="glass p-4 rounded-2xl mb-4">
         <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--warning)" }}>
@@ -204,4 +263,10 @@ export default function TodayPage() {
 function nextLevel(points: number): number {
   const levels = [50, 150, 300, 500, 750, 1000];
   return levels.find((l) => l > points) ?? 1000;
+}
+
+function reflectionCountLabel(count: number): string {
+  if (count % 10 === 1 && count % 100 !== 11) return "думка";
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return "думки";
+  return "думок";
 }

@@ -6,21 +6,25 @@ interface CommunityThoughtsProps {
   thoughts: CommunityThought[];
   currentUid?: string;
   showTodayLink?: boolean;
+  showTitle?: boolean;
 }
 
 export default function CommunityThoughts({
   thoughts,
   currentUid,
   showTodayLink = false,
+  showTitle = true,
 }: CommunityThoughtsProps) {
   return (
     <div
       className="px-4 pb-4 pt-3"
       style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
     >
-      <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#A78BFA" }}>
-        💭 Думки учасників
-      </p>
+      {showTitle && (
+        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#A78BFA" }}>
+          💭 Думки учасників
+        </p>
+      )}
 
       {thoughts.length === 0 ? (
         <p className="text-sm py-2" style={{ color: "var(--muted)" }}>
