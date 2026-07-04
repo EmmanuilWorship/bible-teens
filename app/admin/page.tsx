@@ -12,7 +12,7 @@ import Papa from "papaparse";
 import Image from "next/image";
 
 export default function AdminPage() {
-  const { profile, loading } = useAuth();
+  const { profile, loading, profileLoading } = useAuth();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [stats, setStats] = useState<UserStats[]>([]);
@@ -22,10 +22,10 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"users" | "plan">("users");
 
   useEffect(() => {
-    if (!loading && (!profile || profile.role !== "admin")) {
+    if (!loading && !profileLoading && (!profile || profile.role !== "admin")) {
       router.replace("/today");
     }
-  }, [profile, loading, router]);
+  }, [profile, loading, profileLoading, router]);
 
   useEffect(() => {
     if (!profile || profile.role !== "admin") return;
@@ -107,7 +107,7 @@ export default function AdminPage() {
   const activeToday = stats.filter((s) => s.totalCompleted > 0).length;
   const totalPoints = stats.reduce((sum, s) => sum + s.totalPoints, 0);
 
-  if (loading || !profile) return null;
+  if (loading || profileLoading || !profile) return null;
   if (profile.role !== "admin") return null;
 
   return (

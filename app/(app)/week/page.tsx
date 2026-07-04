@@ -1,16 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { getPlan, getWeekPlans, currentYearMonth, todayStr, formatDate, formatDayOfWeek } from "@/lib/plan";
-import { getUserProgress } from "@/lib/progress";
+import { getPlan, getWeekPlans, currentYearMonth, todayStr, formatDayOfWeek } from "@/lib/plan";
+import { getAllUsersProgress, getUserProgress } from "@/lib/progress";
+import { getAllUsers } from "@/lib/users";
+import { groupThoughtsByDate } from "@/lib/community-thoughts";
+import CommunityThoughts from "@/components/CommunityThoughts";
 import type { DayPlan, DayProgress, MonthPlan } from "@/lib/types";
-import Link from "next/link";
+import type { CommunityThought } from "@/lib/community-thoughts";
 
 export default function WeekPage() {
   const { profile } = useAuth();
   const [plan, setPlan] = useState<MonthPlan | null>(null);
   const [week, setWeek] = useState<DayPlan[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, DayProgress>>({});
+  const [thoughtsByDate, setThoughtsByDate] = useState<Record<string, CommunityThought[]>>({});
+  const [expandedDate, setExpandedDate] = useState<string | null>(todayStr());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,15 +23,18 @@ export default function WeekPage() {
     async function load() {
       try {
         const ym = currentYearMonth();
-        const p = await getPlan(ym);
+        const [p, progs, communityProgress, users] = await Promise.all([
+          getPlan(ym),
+          getUserProgress(profile!.uid, ym),
+          getAllUsersProgress(ym).catch(() => []),
+          getAllUsers().catch(() => []),
+        ]);
         setPlan(p);
         if (p) setWeek(getWeekPlans(p));
-        try {
-          const progs = await getUserProgress(profile!.uid, ym);
-          const map: Record<string, DayProgress> = {};
-          progs.forEach((p) => (map[p.date] = p));
-          setProgressMap(map);
-        } catch {}
+        const map: Record<string, DayProgress> = {};
+        progs.forEach((p) => (map[p.date] = p));
+        setProgressMap(map);
+        setThoughtsByDate(groupThoughtsByDate(communityProgress, users));
       } catch (e) {
         console.error("Load error:", e);
       } finally {
@@ -77,12 +85,13 @@ export default function WeekPage() {
             const done = !!prog?.completed;
             const isToday = day.date === today;
             const isPast = day.date < today;
+            const thoughts = thoughtsByDate[day.date] || [];
+            const expanded = expandedDate === day.date;
 
             return (
-              <Link
+              <div
                 key={day.date}
-                href="/today"
-                className="block rounded-2xl p-4 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                className="rounded-2xl overflow-hidden transition-all"
                 style={{
                   background: isToday
                     ? "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(79,70,229,0.15))"
@@ -96,6 +105,11 @@ export default function WeekPage() {
                     : "1px solid rgba(255,255,255,0.07)",
                 }}
               >
+                <button
+                  type="button"
+                  onClick={() => setExpandedDate(expanded ? null : day.date)}
+                  className="w-full p-4 text-left transition-all hover:bg-white/[0.02]"
+                >
                 <div className="flex items-center gap-3">
                   {/* Day indicator */}
                   <div
@@ -130,18 +144,15 @@ export default function WeekPage() {
 
                   {/* Status */}
                   <div className="flex-shrink-0">
-                    {done ? (
-                      <div className="day-check done">✓</div>
-                    ) : isToday ? (
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                        style={{ background: "rgba(139,92,246,0.3)", border: "1.5px solid #8B5CF6", color: "#A78BFA" }}
-                      >
-                        →
-                      </div>
-                    ) : (
-                      <div className="day-check" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {thoughts.length > 0 && (
+                        <span className="text-xs font-bold" style={{ color: "#A78BFA" }}>
+                          💭 {thoughts.length}
+                        </span>
+                      )}
+                      {done && <div className="day-check done">✓</div>}
+                      <span className="text-xs transition-transform" style={{ color: "var(--muted)", transform: expanded ? "rotate(180deg)" : "none" }}>⌄</span>
+                    </div>
                   </div>
                 </div>
 
@@ -150,7 +161,15 @@ export default function WeekPage() {
                     ✨ Сьогоднішнє читання
                   </p>
                 )}
-              </Link>
+                </button>
+                {expanded && (
+                  <CommunityThoughts
+                    thoughts={thoughts}
+                    currentUid={profile?.uid}
+                    showTodayLink={isToday}
+                  />
+                )}
+              </div>
             );
           })}
         </div>
