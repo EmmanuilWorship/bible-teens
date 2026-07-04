@@ -16,7 +16,7 @@ export function todayStr(): string {
 
 export async function getPlan(yearMonth: string): Promise<MonthPlan | null> {
   const ref = doc(db, "plans", yearMonth);
-  const snap = await withTimeout(getDoc(ref), null as any);
+  const snap = await withTimeout(getDoc(ref));
   if (!snap || !snap.exists()) return null;
   return snap.data() as MonthPlan;
 }

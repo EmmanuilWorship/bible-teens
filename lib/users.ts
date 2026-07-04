@@ -26,7 +26,7 @@ export async function getOrCreateUser(firebaseUser: User): Promise<UserProfile> 
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
-  const snap = await withTimeout(getDocs(collection(db, "users")), null as any);
+  const snap = await withTimeout(getDocs(collection(db, "users")));
   if (!snap) return [];
   return snap.docs.map((d) => d.data() as UserProfile);
 }
