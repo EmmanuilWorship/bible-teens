@@ -25,13 +25,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
-      if (user) {
-        const p = await getOrCreateUser(user);
-        setProfile(p);
-      } else {
+      try {
+        if (user) {
+          const p = await getOrCreateUser(user);
+          setProfile(p);
+        } else {
+          setProfile(null);
+        }
+      } catch (e) {
+        console.error("Auth error:", e);
         setProfile(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return unsub;
   }, []);
