@@ -15,14 +15,21 @@ export default function MonthPage() {
   useEffect(() => {
     if (!profile) return;
     async function load() {
-      const ym = currentYearMonth();
-      const p = await getPlan(ym);
-      setPlan(p);
-      const progs = await getUserProgress(profile!.uid, ym);
-      const map: Record<string, DayProgress> = {};
-      progs.forEach((pr) => (map[pr.date] = pr));
-      setProgressMap(map);
-      setLoading(false);
+      try {
+        const ym = currentYearMonth();
+        const p = await getPlan(ym);
+        setPlan(p);
+        try {
+          const progs = await getUserProgress(profile!.uid, ym);
+          const map: Record<string, DayProgress> = {};
+          progs.forEach((pr) => (map[pr.date] = pr));
+          setProgressMap(map);
+        } catch {}
+      } catch (e) {
+        console.error("Load error:", e);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [profile]);

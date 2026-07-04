@@ -16,10 +16,11 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     async function load() {
+      try {
       const ym = currentYearMonth();
       const [users, allProgress] = await Promise.all([
         getAllUsers(),
-        getAllUsersProgress(ym),
+        getAllUsersProgress(ym).catch(() => []),
       ]);
 
       const progressByUser: Record<string, typeof allProgress> = {};
@@ -34,7 +35,9 @@ export default function LeaderboardPage() {
 
       userStats.sort((a, b) => b.totalPoints - a.totalPoints);
       setStats(userStats);
+      } catch (e) { console.error(e); } finally {
       setLoading(false);
+      }
     }
     load();
   }, []);

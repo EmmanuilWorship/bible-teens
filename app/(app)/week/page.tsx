@@ -16,15 +16,22 @@ export default function WeekPage() {
   useEffect(() => {
     if (!profile) return;
     async function load() {
-      const ym = currentYearMonth();
-      const p = await getPlan(ym);
-      setPlan(p);
-      if (p) setWeek(getWeekPlans(p));
-      const progs = await getUserProgress(profile!.uid, ym);
-      const map: Record<string, DayProgress> = {};
-      progs.forEach((p) => (map[p.date] = p));
-      setProgressMap(map);
-      setLoading(false);
+      try {
+        const ym = currentYearMonth();
+        const p = await getPlan(ym);
+        setPlan(p);
+        if (p) setWeek(getWeekPlans(p));
+        try {
+          const progs = await getUserProgress(profile!.uid, ym);
+          const map: Record<string, DayProgress> = {};
+          progs.forEach((p) => (map[p.date] = p));
+          setProgressMap(map);
+        } catch {}
+      } catch (e) {
+        console.error("Load error:", e);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [profile]);

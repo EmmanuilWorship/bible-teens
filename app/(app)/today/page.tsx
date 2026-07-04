@@ -20,16 +20,25 @@ export default function TodayPage() {
   useEffect(() => {
     if (!profile) return;
     async function load() {
-      const ym = currentYearMonth();
-      const p = await getPlan(ym);
-      setPlan(p);
-      if (p) setToday(getTodayPlan(p));
-      const prog = await getProgress(profile!.uid, todayStr());
-      setProgress(prog);
-      if (prog?.reflection) setReflection(prog.reflection);
-      const all = await getUserProgress(profile!.uid, ym);
-      setAllProgress(all);
-      setLoading(false);
+      try {
+        const ym = currentYearMonth();
+        const p = await getPlan(ym);
+        setPlan(p);
+        if (p) setToday(getTodayPlan(p));
+        try {
+          const prog = await getProgress(profile!.uid, todayStr());
+          setProgress(prog);
+          if (prog?.reflection) setReflection(prog.reflection);
+        } catch {}
+        try {
+          const all = await getUserProgress(profile!.uid, ym);
+          setAllProgress(all);
+        } catch {}
+      } catch (e) {
+        console.error("Load error:", e);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [profile]);
