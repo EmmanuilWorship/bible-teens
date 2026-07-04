@@ -28,27 +28,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsub = onAuthStateChanged(auth, async (user) => {
       clearTimeout(timeout);
       setFirebaseUser(user);
+      const fallback: UserProfile | null = user ? {
+        uid: user.uid,
+        name: user.displayName || user.email?.split("@")[0] || "Учасник",
+        email: user.email || "",
+        photoURL: user.photoURL || "",
+        role: "user",
+        createdAt: Date.now(),
+      } : null;
+
       try {
         if (user) {
-          const p = await getOrCreateUser(user);
+          const firestoreTimeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Firestore timeout")), 3000)
+          );
+          const p = await Promise.race([getOrCreateUser(user), firestoreTimeout]);
           setProfile(p);
         } else {
           setProfile(null);
         }
-      } catch (e) {
-        console.error("Auth error:", e);
-        if (user) {
-          setProfile({
-            uid: user.uid,
-            name: user.displayName || user.email?.split("@")[0] || "Учасник",
-            email: user.email || "",
-            photoURL: user.photoURL || "",
-            role: "user",
-            createdAt: Date.now(),
-          });
-        } else {
-          setProfile(null);
-        }
+      } catch {
+        setProfile(fallback);
       } finally {
         setLoading(false);
       }
