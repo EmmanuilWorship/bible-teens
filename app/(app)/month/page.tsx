@@ -2,14 +2,19 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { getPlan, currentYearMonth, todayStr } from "@/lib/plan";
-import { getUserProgress } from "@/lib/progress";
+import { getAllUsersProgress, getUserProgress } from "@/lib/progress";
+import { getAllUsers } from "@/lib/users";
+import { groupThoughtsByDate } from "@/lib/community-thoughts";
+import CommunityThoughts from "@/components/CommunityThoughts";
 import type { DayPlan, DayProgress, MonthPlan } from "@/lib/types";
-import Link from "next/link";
+import type { CommunityThought } from "@/lib/community-thoughts";
 
 export default function MonthPage() {
   const { profile } = useAuth();
   const [plan, setPlan] = useState<MonthPlan | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, DayProgress>>({});
+  const [thoughtsByDate, setThoughtsByDate] = useState<Record<string, CommunityThought[]>>({});
+  const [expandedDate, setExpandedDate] = useState<string | null>(todayStr());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,14 +22,17 @@ export default function MonthPage() {
     async function load() {
       try {
         const ym = currentYearMonth();
-        const [p, progs] = await Promise.all([
+        const [p, progs, communityProgress, users] = await Promise.all([
           getPlan(ym),
           getUserProgress(profile!.uid, ym),
+          getAllUsersProgress(ym).catch(() => []),
+          getAllUsers().catch(() => []),
         ]);
         setPlan(p);
         const map: Record<string, DayProgress> = {};
         progs.forEach((pr) => (map[pr.date] = pr));
         setProgressMap(map);
+        setThoughtsByDate(groupThoughtsByDate(communityProgress, users));
       } catch (e) {
         console.error("Load error:", e);
       } finally {
@@ -108,12 +116,13 @@ export default function MonthPage() {
                   const done = !!prog?.completed;
                   const isToday = day.date === today;
                   const isPast = day.date < today;
+                  const thoughts = thoughtsByDate[day.date] || [];
+                  const expanded = expandedDate === day.date;
 
                   return (
-                    <Link
+                    <div
                       key={day.date}
-                      href="/today"
-                      className="flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-[1.01]"
+                      className="rounded-xl overflow-hidden transition-all"
                       style={{
                         background: isToday
                           ? "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(79,70,229,0.1))"
@@ -126,6 +135,11 @@ export default function MonthPage() {
                           ? "1px solid rgba(16,185,129,0.15)"
                           : "1px solid rgba(255,255,255,0.05)",
                       }}
+                    >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedDate(expanded ? null : day.date)}
+                      className="w-full flex items-center gap-3 p-3 text-left hover:bg-white/[0.02]"
                     >
                       {/* Date circle */}
                       <div
@@ -156,16 +170,24 @@ export default function MonthPage() {
                       </div>
 
                       {/* Check */}
-                      {done ? (
-                        <span className="text-base flex-shrink-0">✅</span>
-                      ) : isToday ? (
-                        <span className="text-base flex-shrink-0">👉</span>
-                      ) : isPast ? (
-                        <span className="text-base flex-shrink-0 opacity-30">○</span>
-                      ) : (
-                        <span className="text-base flex-shrink-0 opacity-20">○</span>
-                      )}
-                    </Link>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {thoughts.length > 0 && (
+                          <span className="text-xs font-bold" style={{ color: "#A78BFA" }}>
+                            💭 {thoughts.length}
+                          </span>
+                        )}
+                        {done ? <span>✅</span> : isToday ? <span>👉</span> : <span className="opacity-30">○</span>}
+                        <span className="text-xs" style={{ color: "var(--muted)" }}>⌄</span>
+                      </div>
+                    </button>
+                    {expanded && (
+                      <CommunityThoughts
+                        thoughts={thoughts}
+                        currentUid={profile?.uid}
+                        showTodayLink={isToday}
+                      />
+                    )}
+                    </div>
                   );
                 })}
               </div>
