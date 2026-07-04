@@ -23,7 +23,7 @@ export default function LeaderboardPage() {
         getAllUsersProgress(ym).catch(() => []),
       ]);
 
-      const progressByUser: Record<string, typeof allProgress> = {};
+      const progressByUser: Record<string, DayProgress[]> = {};
       allProgress.forEach((p) => {
         if (!progressByUser[p.uid]) progressByUser[p.uid] = [];
         progressByUser[p.uid].push(p);
