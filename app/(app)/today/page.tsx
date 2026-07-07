@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { getPlan, getTodayPlan, currentYearMonth, todayStr, formatDate } from "@/lib/plan";
-import { markCompleted, getAllUsersProgress, getUserProgress, calcStreak } from "@/lib/progress";
+import { markCompleted, unmarkCompleted, getAllUsersProgress, getUserProgress, calcStreak } from "@/lib/progress";
 import { getAllUsers } from "@/lib/users";
 import { groupThoughtsByDate } from "@/lib/community-thoughts";
 import CommunityThoughts from "@/components/CommunityThoughts";
@@ -20,6 +20,7 @@ export default function TodayPage() {
   const [reflection, setReflection] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [unmarking, setUnmarking] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,6 +54,22 @@ export default function TodayPage() {
   const totalPoints = allProgress.reduce((s, p) => s + (p.points || 0), 0);
   const { current: streak } = calcStreak(allProgress);
   const totalCompleted = allProgress.filter((p) => p.completed).length;
+
+  async function handleUnmark() {
+    if (!profile || unmarking) return;
+    setUnmarking(true);
+    try {
+      await unmarkCompleted(profile.uid, todayStr());
+      setProgress(null);
+      setReflection("");
+      const all = await getUserProgress(profile.uid, currentYearMonth());
+      setAllProgress(all);
+    } catch (e) {
+      console.error("Unmark failed:", e);
+    } finally {
+      setUnmarking(false);
+    }
+  }
 
   async function handleMark() {
     if (!profile || !today || saving) return;
@@ -202,11 +219,21 @@ export default function TodayPage() {
               {saving ? "⏳ Зберігаємо..." : saved ? "✅ Збережено!" : "✅ Прочитав(ла)! (+10 балів)"}
             </button>
           ) : (
-            <div
-              className="w-full py-3 rounded-2xl text-center font-semibold text-sm"
-              style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#10B981" }}
-            >
-              ✅ Виконано сьогодні · +{progress.points} балів
+            <div className="flex items-center gap-2">
+              <div
+                className="flex-1 py-3 rounded-2xl text-center font-semibold text-sm"
+                style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#10B981" }}
+              >
+                ✅ Виконано сьогодні · +{progress.points} балів
+              </div>
+              <button
+                onClick={handleUnmark}
+                disabled={unmarking}
+                className="py-3 px-4 rounded-2xl font-semibold text-sm flex-shrink-0"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444" }}
+              >
+                {unmarking ? "..." : "Відмінити"}
+              </button>
             </div>
           )}
         </div>
