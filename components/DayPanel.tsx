@@ -93,7 +93,7 @@ export default function DayPanel({ day, progress, thoughts, profile, onMarkCompl
         />
         {!localProgress?.completed ? (
           <button className="btn-success w-full" onClick={handleMark} disabled={saving}>
-            {saving ? "⏳ Зберігаємо..." : saved ? "✅ Збережено!" : "✅ Прочитав(ла)! (+10 балів)"}
+            {saving ? "⏳ Зберігаємо..." : saved ? "✅ Збережено!" : `✅ Прочитав(ла)! (+${reflection.trim().length > 0 ? 15 : 10} балів)`}
           </button>
         ) : (
           <div className="flex items-center gap-2">

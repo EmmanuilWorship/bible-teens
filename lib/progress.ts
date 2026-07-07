@@ -30,7 +30,7 @@ export async function markCompleted(
   reflection: string
 ): Promise<DayProgress> {
   const existing = await getProgress(uid, date);
-  const points = 10 + (reflection.trim().length > 20 ? 5 : 0);
+  const points = 10 + (reflection.trim().length > 0 ? 5 : 0);
   const data: DayProgress = {
     uid,
     date,
