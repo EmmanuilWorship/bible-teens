@@ -61,7 +61,6 @@ export default function TodayPage() {
     try {
       await unmarkCompleted(profile.uid, todayStr());
       setProgress(null);
-      setReflection("");
       const all = await getUserProgress(profile.uid, currentYearMonth());
       setAllProgress(all);
     } catch (e) {

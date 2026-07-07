@@ -29,7 +29,6 @@ export default function DayPanel({ day, progress, thoughts, profile, onMarkCompl
     try {
       await unmarkCompleted(profile.uid, day.date);
       setLocalProgress(null);
-      setReflection("");
       onUnmarkCompleted(day.date);
     } catch (e) {
       console.error("Unmark failed:", e);
