@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { markCompleted } from "@/lib/progress";
+import { markCompleted, unmarkCompleted } from "@/lib/progress";
 import { formatDate } from "@/lib/plan";
 import CommunityThoughts from "./CommunityThoughts";
 import type { DayPlan, DayProgress, UserProfile } from "@/lib/types";
@@ -12,14 +12,31 @@ interface DayPanelProps {
   thoughts: CommunityThought[];
   profile: UserProfile;
   onMarkCompleted: (date: string, prog: DayProgress) => void;
+  onUnmarkCompleted: (date: string) => void;
 }
 
-export default function DayPanel({ day, progress, thoughts, profile, onMarkCompleted }: DayPanelProps) {
+export default function DayPanel({ day, progress, thoughts, profile, onMarkCompleted, onUnmarkCompleted }: DayPanelProps) {
   const [reflection, setReflection] = useState(progress?.reflection ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [unmarking, setUnmarking] = useState(false);
   const [localProgress, setLocalProgress] = useState<DayProgress | null>(progress);
   const [showThoughts, setShowThoughts] = useState(false);
+
+  async function handleUnmark() {
+    if (unmarking) return;
+    setUnmarking(true);
+    try {
+      await unmarkCompleted(profile.uid, day.date);
+      setLocalProgress(null);
+      setReflection("");
+      onUnmarkCompleted(day.date);
+    } catch (e) {
+      console.error("Unmark failed:", e);
+    } finally {
+      setUnmarking(false);
+    }
+  }
 
   async function handleMark() {
     if (saving || localProgress?.completed) return;
@@ -80,15 +97,29 @@ export default function DayPanel({ day, progress, thoughts, profile, onMarkCompl
             {saving ? "⏳ Зберігаємо..." : saved ? "✅ Збережено!" : "✅ Прочитав(ла)! (+10 балів)"}
           </button>
         ) : (
-          <div
-            className="w-full py-3 rounded-2xl text-center font-semibold text-sm"
-            style={{
-              background: "rgba(16,185,129,0.15)",
-              border: "1px solid rgba(16,185,129,0.3)",
-              color: "#10B981",
-            }}
-          >
-            ✅ Виконано · +{localProgress.points} балів
+          <div className="flex items-center gap-2">
+            <div
+              className="flex-1 py-3 rounded-2xl text-center font-semibold text-sm"
+              style={{
+                background: "rgba(16,185,129,0.15)",
+                border: "1px solid rgba(16,185,129,0.3)",
+                color: "#10B981",
+              }}
+            >
+              ✅ Виконано · +{localProgress.points} балів
+            </div>
+            <button
+              onClick={handleUnmark}
+              disabled={unmarking}
+              className="py-3 px-4 rounded-2xl font-semibold text-sm flex-shrink-0"
+              style={{
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                color: "#EF4444",
+              }}
+            >
+              {unmarking ? "..." : "Відмінити"}
+            </button>
           </div>
         )}
       </div>

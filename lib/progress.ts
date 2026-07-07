@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   collection,
   query,
   where,
@@ -40,6 +41,10 @@ export async function markCompleted(
   };
   await setDoc(doc(db, "progress", progressId(uid, date)), data);
   return data;
+}
+
+export async function unmarkCompleted(uid: string, date: string): Promise<void> {
+  await deleteDoc(doc(db, "progress", progressId(uid, date)));
 }
 
 export async function getUserProgress(uid: string, yearMonth: string): Promise<DayProgress[]> {

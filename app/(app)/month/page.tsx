@@ -189,6 +189,13 @@ export default function MonthPage() {
                         onMarkCompleted={(date, newProg) =>
                           setProgressMap((m) => ({ ...m, [date]: newProg }))
                         }
+                        onUnmarkCompleted={(date) =>
+                          setProgressMap((m) => {
+                            const next = { ...m };
+                            delete next[date];
+                            return next;
+                          })
+                        }
                       />
                     )}
                     </div>
